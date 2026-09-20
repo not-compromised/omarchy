@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [quattro]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fixtures:
+    name: Arch CLI and shell fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: docker build -f .github/ci.Dockerfile -t omarchy-ci:fixtures .
+      - name: Run without a desktop or host network
+        run: docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges omarchy-ci:fixtures
+  gate:
+    name: CI gate
+    if: always()
+    needs: [fixtures]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - env:
+          RESULT: ${{ needs.fixtures.result }}
+        run: test "$RESULT" = success

@@ -8,6 +8,12 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin"
 
+# The real routing table is outside this fixture's network boundary.
+cat >"$tmp/bin/ip" <<'EOF'
+#!/bin/bash
+printf '1.1.1.1 dev omarchy-fixture-route\n'
+EOF
+
 cat >"$tmp/bin/nmcli" <<'EOF'
 #!/bin/bash
 if [[ $* == *"DEVICE,TYPE,STATE"* ]]; then
@@ -28,7 +34,7 @@ payload=$(</dev/stdin)
 printf '%s' "$payload" >"$QR_PAYLOAD_FILE"
 printf '##    \n  ##  \n    ##\n'
 EOF
-chmod +x "$tmp/bin/nmcli" "$tmp/bin/qrencode"
+chmod +x "$tmp/bin/ip" "$tmp/bin/nmcli" "$tmp/bin/qrencode"
 
 run_success_case() {
   local description=$1 fields=$2 expected_payload=$3
